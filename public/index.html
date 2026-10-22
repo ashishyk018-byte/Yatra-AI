@@ -38,8 +38,8 @@
     <h2>Go straight to your <span>destination.</span></h2></div>
     <form id="placeSearch" class="search-form"><span>⌕</span>
         <input id="searchInput" placeholder="Search a place, state, or experience…" aria-label="Search destinations">
-        <button class="button button-blue">Search</button></form>
-    <div id="searchResults"></div>
+        <button class="button button-blue" type="submit">Search</button></form>
+    <div id="searchResults" class="search-results"></div>
     </section>
 
 <section class="section explore-section" id="explore"><div class="section-heading"><div><p class="eyebrow">YOUR NEXT CHAPTER</p>
@@ -59,19 +59,10 @@
         <option value="20000">Up to ₹20,000</option></select></label>
         <button class="button button-blue" id="applyFilters">Apply filters ↗</button>
         <button class="clear-button" id="clearFilters">Reset</button></div>
-        <div id="destinationGrid" class="destination-grid"></div>
-
-
-<div id="loadMoreWrap" class="load-more-wrap hidden">
-    <button id="loadMore" class="button button-blue" type="button">
-        Load More Places
-    </button>
-</div>
-
-<p id="emptyState" class="empty-state hidden">
-    No places match these filters. Try a different category or budget.
-</p>
-
+<div class="destination-grid" id="destinationGrid"></div>
+<div class="load-more-wrap hidden" id="loadMoreWrap">
+    <button class="button button-blue" id="loadMore" type="button">Load more places</button></div>
+    <p class="empty-state hidden" id="emptyState">No places match these filters. Try a different category or budget.</p>
 </section>
 
 
@@ -102,6 +93,7 @@
     <p class="fine-print">Estimates only. Prices vary by season, route, availability, and booking time. Confirm costs with travel providers.</p>
 </div></div></section>
 <br><br>
+
 <section class="section vlog-section" id="vlogs"><div class="section-heading">
     <div><p class="eyebrow">TRAVEL THROUGH THEIR EYES</p>
         <h2>Little clips. Big <span>memories.</span></h2>

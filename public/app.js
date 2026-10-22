@@ -26,13 +26,45 @@ function ratingFor(d){let saved=JSON.parse(localStorage.getItem('tg-ratings')||'
 
 function cardHTML(d){return `<article class="destination-card" tabindex="0" role="button" aria-label="Open ${esc(d.name)} details" data-open="${d.id}"><div class="card-image">${imgTag(d.image,d.name)}<span class="category-pill">${esc(d.category[0])}</span><button class="heart" data-fav="${d.id}" aria-label="Save ${esc(d.name)}">♡</button></div><div class="card-body"><div class="card-title-row"><div><h3>${esc(d.name)}</h3><span class="location">⌖ ${esc(d.state)}</span></div><span class="rating">★ ${ratingFor(d).toFixed(1)}</span></div><p class="card-summary">${esc(d.summary)}</p><div class="card-meta"><span>From ${money(d.budget)}</span><span>${esc(d.days)}</span></div><div class="card-weather" data-wx="${d.id}">Live weather: loading…</div><span class="card-open">Explore destination →</span></div></article>`;}
 
-const PAGE_SIZE=12;let visibleCount=PAGE_SIZE;
 
-function renderDestinations(){visibleCount=PAGE_SIZE;drawDestinations();}
+document.addEventListener('click', function (e) {
+  // Favourite button ka existing behavior disturb na ho
+ 
+  if (e.target.closest('[data-fav]')) return;  const card = e.target.closest('[data-open]');if (!card) return;  openDestination(card.dataset.open);});
 
-function drawDestinations(){let category=$('#categoryFilter').value,state=$('#stateFilter').value,budget=$('#budgetFilter').value,query=$('#searchInput').value.trim().toLowerCase();let list=DESTINATIONS.filter(d=>(category==='all'||d.category.includes(category))&&(state==='all'||d.state===state)&&(budget==='all'||d.budget<=Number(budget))&&(!query||[d.name,d.state,d.summary,...d.category].join(' ').toLowerCase().includes(query)));let shown=list.slice(0,visibleCount);$('#destinationGrid').innerHTML=shown.map(cardHTML).join('');$('#loadMoreWrap').classList.toggle('hidden',list.length<=shown.length);$('#loadMore').textContent=`Load more places (${list.length-shown.length} remaining)`;$('#emptyState').classList.toggle('hidden',list.length>0);$('#resultCount').textContent=`Showing ${shown.length} of ${list.length} destination${list.length===1?'':'s'}`;loadCardWeather(shown);renderVlogs(); }
+  function searchPlaces() {
 
-$('#applyFilters').addEventListener('click',renderDestinations);$('#loadMore').addEventListener('click',()=>{visibleCount+=PAGE_SIZE;drawDestinations();});['categoryFilter','stateFilter','budgetFilter'].forEach(id=>$('#'+id).addEventListener('change',renderDestinations));$('#clearFilters').addEventListener('click',()=>{$('#categoryFilter').value='all';$('#stateFilter').value='all';$('#budgetFilter').value='all';$('#searchInput').value='';renderDestinations();});$('#placeSearch').addEventListener('submit',e=>{e.preventDefault();renderDestinations();$('#explore').scrollIntoView({behavior:'smooth'});});
+const query = $('#searchInput').value.trim().toLowerCase();const results = query? DESTINATIONS.filter(d => [d.name, d.state, d.summary, ...d.category].join(' ').toLowerCase().includes(query)): [];
+  
+$('#searchResults').innerHTML = results.length ? results.map(cardHTML).join(''): '<p>No matching places found. Try another search.</p>'; loadCardWeather(results);
+
+}     
+
+
+const PAGE_SIZE=12;let visibleCount=8;
+function renderDestinations(){visibleCount=PAGE_SIZE;drawDestinations();}drawDestinations();
+function drawDestinations() {
+  const category = $('#categoryFilter').value;
+  const state = $('#stateFilter').value;
+  const budget = $('#budgetFilter').value;
+  const list = DESTINATIONS.filter(d =>(category === 'all' || d.category.includes(category)) &&(state === 'all' || d.state === state) &&(budget === 'all' || d.budget <= Number(budget)));
+  const shown = list.slice(0, visibleCount);
+  $('#destinationGrid').innerHTML = shown.map(cardHTML).join('');$('#loadMoreWrap').classList.toggle('hidden',list.length <= shown.length);$('#loadMore').textContent =`Load more places (${list.length - shown.length} remaining)`;
+  $('#emptyState').classList.toggle('hidden', list.length > 0);$('#resultCount').textContent = `Showing ${shown.length} of ${list.length} destination${list.length === 1 ? '' : 's'}`; loadCardWeather(shown);renderVlogs();
+}
+$('#applyFilters').addEventListener('click', renderDestinations);
+$('#loadMore').addEventListener('click', () => {visibleCount += PAGE_SIZE;drawDestinations();
+});
+['categoryFilter', 'stateFilter', 'budgetFilter'].forEach(id => {
+  $('#' + id).addEventListener('change', renderDestinations);
+});
+$('#clearFilters').addEventListener('click', () => {
+  $('#categoryFilter').value = 'all'; $('#stateFilter').value = 'all'; $('#budgetFilter').value = 'all'; renderDestinations();
+});
+$('#placeSearch').addEventListener('submit', e => {
+  e.preventDefault(); searchPlaces(); $('#searchResults').scrollIntoView({ behavior: 'smooth', block: 'start'});
+});
+
 
 let activeDestination=null,slideIndex=0;
 
@@ -61,6 +93,16 @@ async function loadModalWeather(d){const box=$('#modalWeather'),now=$('#modalWxN
 function weatherText(code){if(code===0)return'Clear';if([1,2,3].includes(code))return'Partly cloudy';if([45,48].includes(code))return'Fog';if([51,53,55,56,57].includes(code))return'Drizzle';if([61,63,65,66,67,80,81,82].includes(code))return'Rain';if([71,73,75,77,85,86].includes(code))return'Snow';if([95,96,99].includes(code))return'Thunderstorm';return'Variable conditions';}function weatherIcon(code){return code===0?'☀':[1,2,3].includes(code)?'⛅':[45,48].includes(code)?'🌫':[71,73,75,77,85,86].includes(code)?'❄':[95,96,99].includes(code)?'⛈':'🌧';}
 
 $('#weatherForm').addEventListener('submit',e=>{e.preventDefault();checkWeather($('#weatherPlace').value.trim());});
+
+
+const weatherForm = $('#weatherForm');
+
+if (weatherForm) {
+  weatherForm.addEventListener('submit', e => {
+    e.preventDefault();
+    checkWeather($('#weatherPlace').value.trim());
+  });
+}
 
 function findDest(name){const n=String(name||'').trim().toLowerCase();return n?DESTINATIONS.find(d=>d.name.toLowerCase()===n):null;}
 
@@ -527,61 +569,90 @@ toast(isEditing ? 'Vlog updated successfully!' : 'Vlog saved successfully!');
 
 
 
+const chatHistory = [];
 
-function answerFor(q){let s=q.toLowerCase();if(s.includes('budget')||s.includes('cost')||s.includes('cheap'))return'For a budget-friendly trip, compare train and bus options, travel outside peak dates, choose a hostel or dharamshala where suitable, and keep a 10–15% emergency buffer. Use the Budget Planner above for an indicative range.';if(s.includes('pack')||s.includes('monsoon')||s.includes('rain'))return'For a monsoon trip, pack a light waterproof jacket, quick-dry layers, shoes with good grip, a waterproof phone pouch, basic medicines you normally use, and a small dry bag. Check local weather alerts and road conditions before leaving.';if(s.includes('3-day')||s.includes('nature')||s.includes('mountain'))return'For a 3-day nature escape, consider Munnar, Manali, or Darjeeling depending on your starting city and season. Travel time can take a large part of a short trip, so check route duration first and avoid overpacking the itinerary.';if(s.includes('weather'))return'Use the Weather section for a current forecast from Open-Meteo. Mountain weather can change quickly, so also check official local alerts before departure.';if(s.includes('taj')||s.includes('history'))return'Taj Mahal in Agra is a great heritage option, especially from October to March. Check current ticketing and visiting rules before you go, and consider adding other Agra heritage sites if you have time.';return'I can help with basic destination ideas, seasons, packing, and planning. Tell me your starting city, preferred experience (nature, history, beach, spiritual, or adventure), number of days, and approximate budget for a more useful suggestion. This is a demo assistant, not a connected live AI.';}
+async function answerFor(q) {
+  let response;
+  try {
+    response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: q, history: chatHistory.slice(-8) })
+    });
+  } catch {
+    throw new Error('Server se connect nahi ho paya. Pehle "npm start" chalao aur http://localhost:3000 se page kholo.');
+  }
 
-function addChat(text,isUser){let el=document.createElement('div');el.className=isUser?'user-message':'bot-message';el.textContent=text;$('#chatMessages').appendChild(el);$('#chatMessages').scrollTop=$('#chatMessages').scrollHeight;}
+  const raw = await response.text();
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(`Server ne JSON nahi diya (HTTP ${response.status}). Page ko Node server (http://localhost:3000) se kholo, Live Server ya file se nahi.`);
+  }
 
+  if (!response.ok) throw new Error(data.error || 'AI response nahi mil paya.');
 
+  chatHistory.push({ role: 'user', content: q }, { role: 'assistant', content: data.reply });
+  return data.reply;
+}
+
+function addChat(text, isUser) {
+  const el = document.createElement('div');
+  el.className = isUser ? 'user-message' : 'bot-message';
+  el.textContent = text;
+
+  const messages = $('#chatMessages');
+  messages.appendChild(el);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function sendChatMessage(q) {
+  if (!q) return;
+
+  addChat(q, true);
+
+  const loading = 'TripGuide AI soch raha hai...';
+  addChat(loading, false);
+
+  const messages = $('#chatMessages');
+  const botMessages = messages.querySelectorAll('.bot-message');
+  const loadingElement = botMessages[botMessages.length - 1];
+
+  try {
+    const answer = await answerFor(q);
+    loadingElement.textContent = answer;
+  } catch (error) {
+    loadingElement.textContent =
+      error.message || 'AI se connection nahi ho paya. Dobara try karo.';
+
+    console.error('TripGuide AI error:', error);
+  }
+
+  messages.scrollTop = messages.scrollHeight;
+}
 
 const chatForm = $('#chatForm');
 
-
-
 if (chatForm) {
+  chatForm.addEventListener('submit', async e => {
+    e.preventDefault();
 
-  chatForm.addEventListener('submit', e => {
+    const chatInput = $('#chatInput');
+    const q = chatInput?.value.trim();
 
-    e.preventDefault();
+    if (!q) return;
 
-
-
-    const chatInput = $('#chatInput');
-
-    const q = chatInput?.value.trim();
-
-
-
-    if (!q) return;
-
-
-
-    addChat(q, true);
-
-    chatInput.value = '';
-
-
-
-    setTimeout(() => addChat(answerFor(q), false), 250);
-
-  });
-
+    chatInput.value = '';
+    await sendChatMessage(q);
+  });
 }
 
-
-
 document.querySelectorAll('[data-question]').forEach(button => {
-
-  button.addEventListener('click', () => {
-
-    addChat(button.dataset.question, true);
-
-    setTimeout(() => addChat(answerFor(button.dataset.question), false), 250);
-
-  });
-
+  button.addEventListener('click', () => {
+    sendChatMessage(button.dataset.question);
+  });
 });
-
 
 
 const newsletterForm = $('#newsletterForm');
